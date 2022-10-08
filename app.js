@@ -10,11 +10,11 @@ var express = require("express"),
 const mysql = require('mysql');
  
 var connection = mysql.createConnection({
-    host:"xxx",
-    user:"xxx",
-    password:"xxxx",
+    host:"database-1.cxjhcqoiuwd1.us-east-1.rds.amazonaws.com",
+    user:"admin",
+    password:"csproject",
     port:"3306",
-    database:"xxxx"
+    database:"register"
 });
 connection.connect(function(err){
     if(err){
@@ -36,6 +36,10 @@ app.use(session({secret:'Keep it secret'
 //Showing default page
 app.get("/", function (req, res) {
     res.render("login");
+    if(req.session.id!=null)
+    {res.render('home');}
+    else
+    {res.redirect('/login');}
 });
 //Showing Home page
 app.get("/home", function (req, res) {
@@ -73,9 +77,9 @@ app.post("/register", function (req, res) {
 //Showing login form
 app.get("/login", function (req, res) {
     if(req.session.loggedIn)
-    {res.redirect('home');}
+    {res.redirect('/home');}
     else
-    {res.redirect('/login');}
+    {res.render('login');}
 });
 //Handling user login
 app.post("/login",  function (req, res) {
@@ -92,7 +96,7 @@ app.post("/login",  function (req, res) {
         if (result[0].username != undefined ){
             req.session.isLoggedIn=true;
             req.session.username=monoalphabeticCipher.decipher(result[0].username);
-            res.redirect("home");
+            res.redirect("/home");
         }
         else{
             res.render("login");

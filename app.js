@@ -1,10 +1,7 @@
 //validate karavanu che SQL injection vadu
 var express = require("express"),
-    passport = require("passport"),
-    bodyParser = require("body-parser"),
-    LocalStrategy = require("passport-local"),
-    passportLocalMongoose = require("passport-local-mongoose"),
-    User = require("./models/user"),
+    session = require("express-session"),
+    bodyParser = require('body-parser'),
     MonoAlphabeticCipher = require('text-ciphers').MonoAlphabeticCipher,
     monoalphabeticCipher = new MonoAlphabeticCipher({
         substitution: MonoAlphabeticCipher.createKeyByShift(-5)
@@ -32,24 +29,22 @@ var app = express();
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use(require("express-session")({
-    secret: "Rusty is a dog",
-    resave: false,
-    saveUninitialized: false
-}));
+app.use(session({secret:'Keep it secret'
+,name:'uniqueSessionID'
+,saveUninitialized:false}))
  
-app.use(passport.initialize());
-app.use(passport.session());
-passport.use(new LocalStrategy(User.authenticate()));
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
 //Showing default page
 app.get("/", function (req, res) {
     res.render("login");
 });
 //Showing Home page
-app.get("/index", isLoggedIn, function (req, res) {
-    res.render("index");
+app.get("/home", function (req, res) {
+    console.log(req.session.id);
+    console.log(req.session.username);
+    if(req.session.id!=null)
+    {res.render('home');}
+    else
+    {res.redirect('/login');}
 });
 // Showing register form
 app.get("/register", function (req, res) {
@@ -63,10 +58,9 @@ app.post("/register", function (req, res) {
     console.log(password);
     var encrypt_username = monoalphabeticCipher.encipher(username);
     var encrypt_passwd = monoalphabeticCipher.encipher(password);
-    var hash_username = crypto.createHash('sha256').update(encrypt_username).digest('hex');
     var hash_passwd = crypto.createHash('sha256').update(encrypt_passwd).digest('hex');
     let stmt = "INSERT INTO register VALUES (?,?)";
-    let dict=[hash_username,hash_passwd];
+    let dict=[encrypt_username,hash_passwd];
     connection.query(stmt, dict, (err, results, fields) => {
         if (err) {
           return console.error(err.message);
@@ -78,27 +72,40 @@ app.post("/register", function (req, res) {
 });
 //Showing login form
 app.get("/login", function (req, res) {
-    res.render("login");
+    if(req.session.loggedIn)
+    {res.redirect('home');}
+    else
+    {res.redirect('/login');}
 });
 //Handling user login
-app.post("/login", passport.authenticate("local", {
-    successRedirect: "/index",
-    failureRedirect: "/login"
-}), function (req, res) {
+app.post("/login",  function (req, res) {
+    var username = req.body.username
+    var password = req.body.password
+    var encrypt_username = monoalphabeticCipher.encipher(username);
+    var encrypt_passwd = monoalphabeticCipher.encipher(password);
+    var hash_passwd = crypto.createHash('sha256').update(encrypt_passwd).digest('hex');
+    let stmt = "SELECT username FROM register WHERE username = ? AND passwd = ?";
+    connection.query(stmt, [encrypt_username,hash_passwd],(err, result) => {
+        if (err) {
+          return console.error("Error::"+err.message);
+        }
+        if (result[0].username != undefined ){
+            req.session.isLoggedIn=true;
+            req.session.username=monoalphabeticCipher.decipher(result[0].username);
+            res.redirect("home");
+        }
+        else{
+            res.render("login");
+        }
+      });
 });
  
 //Handling user logout
 app.get("/logout", function (req, res) {
-    req.logout();
     req.session.destroy();
     res.redirect("/");
 });
- 
-function isLoggedIn(req, res, next) {
-    if (req.isAuthenticated()) return next();
-    res.redirect("/login");
-}
- 
+
 var port = process.env.PORT || 3000;
 app.listen(port, function () {
     console.log("Server Has Started! on http://localhost:3000/");

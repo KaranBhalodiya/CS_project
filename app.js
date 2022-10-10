@@ -10,11 +10,11 @@ var express = require("express"),
 const mysql = require('mysql');
  
 var connection = mysql.createConnection({
-    host:"database-1.cxjhcqoiuwd1.us-east-1.rds.amazonaws.com",
-    user:"admin",
-    password:"csproject",
+    host:"xxx",
+    user:"xx",
+    password:"xx",
     port:"3306",
-    database:"register"
+    database:"xxx"
 });
 connection.connect(function(err){
     if(err){
